@@ -1,0 +1,41 @@
+---
+title: "Your Document Title"
+author: "Futoshi Sakuma"
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+editor_options: 
+  chunk_output_type: console
+---
+
+## Library
+```{r}
+library(rstan)
+```
+
+
+## 誤差$\sigma$が既知の場合
+
+例えば標準偏差68の場合、分析して150ppmが得られた時にそのサンプルが100ppm以上である確率を求める。事前分布を無情報とした場合は以下のようになる。
+
+```{r}
+## 
+pnorm(100, 150, 68, lower.tail = F)
+
+```
+
+## 測定の連鎖
+
+標準偏差68で、1回目の分析値が150ppm、2回目が170ppmとなった場合に100ppm以上である確率を求める。
+
+```{r}
+m1_model <- rstan::stan_model(file = "m1.stan")
+```
+
+## 仕様
+
+```{r}
+sessioninfo::session_info()
+```
