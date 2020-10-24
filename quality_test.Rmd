@@ -1,6 +1,6 @@
 ---
 title: "Your Document Title"
-author: "Futoshi Sakuma"
+author: ""
 date: "`r Sys.Date()`"
 output:
   prettydoc::html_pretty:
