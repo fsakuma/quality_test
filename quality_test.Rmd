@@ -12,7 +12,11 @@ editor_options:
 
 ## Library
 ```{r}
-library(rstan)
+library(cmdstanr)
+library(posterior)
+library(bayesplot)
+color_scheme_set("brightblue")
+library(pwr)
 ```
 
 
@@ -21,17 +25,72 @@ library(rstan)
 例えば標準偏差68の場合、分析して150ppmが得られた時にそのサンプルが100ppm以上である確率を求める。事前分布を無情報とした場合は以下のようになる。
 
 ```{r}
-## 
 pnorm(100, 150, 68, lower.tail = F)
 
 ```
 
 ## 測定の連鎖
 
-標準偏差68で、1回目の分析値が150ppm、2回目が170ppmとなった場合に100ppm以上である確率を求める。
+測定値が標準偏差68で、1回目の分析値が150ppm、2回目が170ppmとなった場合に100ppm以上である確率を求める。
+
+ベイズの定理により事前分布を$N(150, 68^2)$とし、170ppmが得られた時の事後分布は、
 
 ```{r}
-m1_model <- rstan::stan_model(file = "m1.stan")
+mu0 <- 158.3; mu1 <- 102; sigma0 <- 34; sigma1 <- 20; n=1
+
+mu <- (mu0/sigma0^2+mu1*n/sigma1^2)/(1/sigma0^2+n/sigma1^2)
+
+sigma <- sqrt(1/(1/sigma0^2+n/sigma1^2))
+```
+
+よって、$N(160, 48^2)$と推定される。100ppm以上である確率は、
+
+```{r}
+pnorm(100,mu, sigma, lower.tail = F)
+```
+
+となる。
+
+
+```{r}
+test1m <- cmdstanr::cmdstan_model("test1.stan")
+
+data_list <- list(y=170)
+fit1 <- test1m$sample(data = data_list, seed = 1116, chains = 4)
+fit1$summary()
+```
+
+
+## 必要なサンプル数
+
+一般的な頻度主義に基づくサンプル数を算出する。
+
+```{r}
+d <- (135-100)/68
+pwr::pwr.t.test(d=d, sig.level = 0.05, power = 0.8, alternative = "greater", type = "one.sample")
+```
+
+```{r}
+chol <- c(274.8501,208.6479,286.7656,413.5640,344.2833,292.2896,296.8147,
+ 198.4725, 466.3404, 422.0513, 158.3340, 252.9971, 316.3647, 237.2512,
+ 381.1431, 131.5190, 300.1888, 341.7261, 487.6174, 200.7114, 216.6859,
+ 466.1822, 455.6942, 449.0033, 290.7924, 275.1898, 292.9542, 328.8997,
+  99.7303, 275.1126, 366.7504, 272.8722, 436.3839, 160.2993, 269.5784,
+ 394.8876, 234.3379, 449.0895, 153.6546, 301.6407, 376.8302, 381.5326,
+ 378.2189, 607.6112, 162.4040, 251.7461, 274.9384, 272.1369, 712.3612,
+ 283.9782)
+ 
+ 
+samplemu <- mean(chol)
+samplevar <- var(chol)/length(chol)
+priormu <- 328
+priorvar <- 25
+weight0 <- 1/priorvar
+weight1 <- 1/samplevar
+postvar <- 1/(weight0+weight1)
+weight0 <- weight0*postvar
+weight1 <- weight1*postvar
+postmu <- weight0*priormu+weight1*samplemu
 ```
 
 ## 仕様
